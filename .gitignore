@@ -1,0 +1,6 @@
+# Buat file .gitignore
+echo ".streamlit/" >> .gitignore
+echo "*.db" >> .gitignore
+echo "*.pyc" >> .gitignore
+echo "__pycache__/" >> .gitignore
+echo "test*.py" >> .gitignore
