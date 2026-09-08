@@ -201,7 +201,7 @@ def cari_warung(lokasi_user, prompt_user):
     return semua_warung, kategori_terdeteksi
 
 # ============================================
-# 🤖 PANGGIL AI (FIXED: PRIORITAS 3.6 + RETRY)
+# 🤖 PANGGIL AI (DENGAN DEBUG ERROR)
 # ============================================
 def panggil_ai(api_key, data_warung, prompt_user, lokasi_user):
     if not data_warung:
@@ -235,11 +235,13 @@ JAWABAN:
     headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     data = {"contents": [{"parts": [{"text": prompt}]}]}
     
+    # Untuk menyimpan error terakhir
+    last_error = None
+    
     for model in daftar_model:
         for percobaan in range(3):  # Coba 3x per model
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
             try:
-                # 🔥 DELAY EXPONENTIAL: 1s, 2s, 4s
                 waktu_tunggu = 1 * (2 ** percobaan)
                 time.sleep(waktu_tunggu)
                 
@@ -248,19 +250,27 @@ JAWABAN:
                 if response.status_code == 200:
                     hasil = response.json()
                     return hasil['candidates'][0]['content']['parts'][0]['text']
-                elif response.status_code == 503:
-                    # 503 = sibuk, lanjut percobaan berikutnya
-                    continue
                 else:
-                    # Error lain, lanjut model berikutnya
-                    break
-            except:
+                    # Simpan error untuk debug
+                    last_error = f"Model {model} - Status {response.status_code}: {response.text[:200]}"
+                    if response.status_code == 503:
+                        # 503 = sibuk, lanjut percobaan berikutnya
+                        continue
+                    else:
+                        # Error lain (401, 404, dll) -> langsung pindah model
+                        break
+            except Exception as e:
+                last_error = f"Model {model} - Exception: {str(e)}"
                 continue
         
         # Jika 3x percobaan gagal, lanjut ke model berikutnya
         continue
     
-    return "❌ Maaf, semua model sedang sibuk! Tunggu 5-10 menit ya."
+    # Jika semua gagal, tampilkan pesan debug
+    if last_error:
+        return f"❌ **Gagal mendapatkan respons dari AI.**\n\nDetail error terakhir:\n```\n{last_error}\n```\n\n**Solusi:**\n1. Periksa API Key di Secrets (Settings → Secrets)\n2. Pastikan API Key aktif di https://aistudio.google.com/apikey\n3. Coba buat API Key baru jika perlu"
+    else:
+        return "❌ Maaf, semua model sedang sibuk! Tunggu 5-10 menit ya."
 
 # ============================================
 # 🏠 TAMPILAN UTAMA (JUDUL BESAR + TANPA STATISTIK VERTIKAL)
