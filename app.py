@@ -247,11 +247,12 @@ st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide"
 st.markdown("""
     <style>
     .main-title {
-        font-size: 48px !important;
-        font-weight: 800;
+        font-size: 64px !important;
+        font-weight: 900 !important;
         color: #D97706;
         text-align: center;
         margin-top: 10px;
+        letter-spacing: -1px;
     }
     .sub-title {
         text-align: center;
