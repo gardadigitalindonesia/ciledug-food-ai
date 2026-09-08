@@ -201,11 +201,12 @@ def cari_warung(lokasi_user, prompt_user):
     return semua_warung, kategori_terdeteksi
 
 # ============================================
-# 🤖 PANGGIL AI
+# 🤖 PANGGIL AI (FIXED: PRIORITAS 3.6 + RETRY)
 # ============================================
 def panggil_ai(api_key, data_warung, prompt_user, lokasi_user):
     if not data_warung:
         return "Maaf, belum ada data warung yang cocok. Bantu kami tambahkan data ya! 🙏"
+    
     prompt = f"""
 Kamu adalah asisten kuliner Ciledug Raya yang RAMAH, JUJUR, dan ADIL.
 
@@ -223,23 +224,46 @@ TUGAS:
 
 JAWABAN:
 """
-    daftar_model = ["gemini-3.6-flash", "gemini-2.5-flash", "gemini-2.5-pro"]
+    
+    # 🔥 PRIORITAS: 3.6 FLASH (PALING STABIL)
+    daftar_model = [
+        "gemini-3.6-flash",   # PALING STABIL
+        "gemini-2.5-pro",     # CADANGAN
+        "gemini-2.5-flash",   # TERAKHIR
+    ]
+    
     headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
     data = {"contents": [{"parts": [{"text": prompt}]}]}
+    
     for model in daftar_model:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        try:
-            time.sleep(1)
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-            if response.status_code == 200:
-                hasil = response.json()
-                return hasil['candidates'][0]['content']['parts'][0]['text']
-        except:
-            continue
+        for percobaan in range(3):  # Coba 3x per model
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            try:
+                # 🔥 DELAY EXPONENTIAL: 1s, 2s, 4s
+                waktu_tunggu = 1 * (2 ** percobaan)
+                time.sleep(waktu_tunggu)
+                
+                response = requests.post(url, headers=headers, json=data, timeout=30)
+                
+                if response.status_code == 200:
+                    hasil = response.json()
+                    return hasil['candidates'][0]['content']['parts'][0]['text']
+                elif response.status_code == 503:
+                    # 503 = sibuk, lanjut percobaan berikutnya
+                    continue
+                else:
+                    # Error lain, lanjut model berikutnya
+                    break
+            except:
+                continue
+        
+        # Jika 3x percobaan gagal, lanjut ke model berikutnya
+        continue
+    
     return "❌ Maaf, semua model sedang sibuk! Tunggu 5-10 menit ya."
 
 # ============================================
-# 🏠 TAMPILAN UTAMA
+# 🏠 TAMPILAN UTAMA (JUDUL BESAR + TANPA STATISTIK VERTIKAL)
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
@@ -253,13 +277,14 @@ st.markdown("""
         text-align: center;
         margin-top: 10px;
         letter-spacing: -1px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
     .sub-title {
         text-align: center;
         color: #4B5563;
         font-style: italic;
         margin-bottom: 20px;
-        font-size: 16px;
+        font-size: 18px;
     }
     .footer {
         text-align: center;
@@ -283,12 +308,13 @@ st.markdown("""
     }
     .total-warung {
         text-align: center;
-        font-size: 18px;
+        font-size: 20px;
         color: #4B5563;
         margin-bottom: 10px;
+        font-weight: 500;
     }
     @media (max-width: 600px) {
-        .main-title { font-size: 32px !important; }
+        .main-title { font-size: 40px !important; }
         .sub-title { font-size: 14px !important; }
         .stTextInput input { font-size: 16px !important; }
         .stTextArea textarea { font-size: 16px !important; }
@@ -296,7 +322,6 @@ st.markdown("""
             font-size: 16px !important;
             padding: 12px !important;
         }
-        .warung-card { padding: 10px !important; }
         .total-warung { font-size: 16px; }
     }
     </style>
@@ -311,7 +336,7 @@ st.markdown(f'<p class="total-warung">🏪 Total Kuliner: {len(st.session_state.
 st.markdown("---")
 
 # ============================================
-# 🗂️ TAB (NAMA DIUBAH LEBIH ELEGAN!)
+# 🗂️ TAB
 # ============================================
 tab1, tab2, tab3 = st.tabs(["🔍 Cari Kuliner", "➕ Rekomendasikan Tempat", "📋 Admin Panel"])
 
