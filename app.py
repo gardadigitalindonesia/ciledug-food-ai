@@ -2,17 +2,25 @@ import streamlit as st
 import requests
 import json
 import time
+import sqlite3
 import folium
 from streamlit_folium import folium_static
 from datetime import datetime
 import urllib.parse
+import os
 
 # ============================================
-# 🔑 AMBIL CREDENTIALS DARI SECRETS
+# 🔑 CREDENTIALS (dari Streamlit Secrets)
 # ============================================
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_ANON_KEY"]
-API_KEY_FIX = st.secrets["GEMINI_API_KEY"]
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_ANON_KEY"]
+    API_KEY_FIX = st.secrets["GEMINI_API_KEY"]
+except:
+    # Untuk testing lokal
+    SUPABASE_URL = "https://your-project.supabase.co"
+    SUPABASE_KEY = "your-anon-key"
+    API_KEY_FIX = "your-gemini-key"
 
 # ============================================
 # 🗄️ SUPABASE HELPER FUNCTIONS
@@ -67,330 +75,10 @@ def get_next_id():
     return 1
 
 # ============================================
-# 📦 DATA DEFAULT (16 WARUNG)
+# 📦 LOAD DATA
 # ============================================
-DEFAULT_WARUNG = [
-    {
-        "id": 1,
-        "nama": "Barayam - Ayam Goreng Bawang Putih",
-        "lokasi": "Sudimara Timur",
-        "kategori": "Ayam Goreng",
-        "harga": "Rp 17.000 - 25.000",
-        "kelebihan": "Ayam goreng bawang putih viral! Daging juicy, bumbu meresap, crispy.",
-        "kekurangan": "ANTRIAN BERJAM-JAM! Siap-siap 45 menit lebih.",
-        "rating": 4.3,
-        "status": "📱 Viral",
-        "jam_buka": "10.00 - 17.00",
-        "jadwal_buka": "Setiap Hari (10.00 - 17.00)",
-        "review_warga": "Ayam bawang putih paling enak se-Ciledug!",
-        "alamat": "Jl. Cipto Mangunkusumo No.77, Sudimara Timur",
-        "kontak": "0813-1222-130",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-08"
-    },
-    {
-        "id": 2,
-        "nama": "Mie Ayam Bang Adi Batas",
-        "lokasi": "Karang Mulya",
-        "kategori": "Mie Ayam",
-        "harga": "Rp 13.000 - 20.000",
-        "kelebihan": "Legendaris, kuah gurih, topping melimpah.",
-        "kekurangan": "Parkir terbatas, hanya cash.",
-        "rating": 4.8,
-        "status": "🔥 Legend",
-        "jam_buka": "05.45 - 13.00",
-        "jadwal_buka": "Setiap Hari (05.45 - 13.00)",
-        "review_warga": "Rasanya konsisten dari dulu!",
-        "alamat": "Jl. Raden Saleh, Karang Mulya",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 3,
-        "nama": "Nasi Goreng Kambing Kebon Sirih",
-        "lokasi": "Sudimara Barat",
-        "kategori": "Nasi Goreng",
-        "harga": "Rp 25.000 - 35.000",
-        "kelebihan": "Bumbu rempah kuat, daging kambing empuk.",
-        "kekurangan": "Tempat panas, parkir terbatas.",
-        "rating": 4.5,
-        "status": "📱 Viral",
-        "jam_buka": "17.00 - 22.00",
-        "jadwal_buka": "Setiap Hari (17.00 - 22.00)",
-        "review_warga": "Enak banget buat makan malam!",
-        "alamat": "Jl. Haji Naim, Sudimara Barat",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 4,
-        "nama": "Bakso Pak Haji Udin",
-        "lokasi": "Larangan Utara",
-        "kategori": "Bakso",
-        "harga": "Rp 15.000 - 25.000",
-        "kelebihan": "Bakso gede, kuah bening segar, sambal pedas.",
-        "kekurangan": "Tempat agak panas.",
-        "rating": 4.3,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "10.00 - 21.00",
-        "jadwal_buka": "Setiap Hari (10.00 - 21.00)",
-        "review_warga": "Baksonya gede-gede, kenyang!",
-        "alamat": "Jl. Haji Moch. Saleh, Larangan Utara",
-        "kontak": "0812-3456-7890",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 5,
-        "nama": "Sate Madura Cak Man",
-        "lokasi": "Petukangan",
-        "kategori": "Sate",
-        "harga": "Rp 20.000 - 30.000",
-        "kelebihan": "Sate ayam & kambing, bumbu kacang kental.",
-        "kekurangan": "Parkir terbatas.",
-        "rating": 4.6,
-        "status": "🔥 Legend",
-        "jam_buka": "17.00 - 23.00",
-        "jadwal_buka": "Setiap Hari (17.00 - 23.00)",
-        "review_warga": "Sate Madura paling enak se-Ciledug Raya!",
-        "alamat": "Jl. Petukangan Raya, Pondok Aren",
-        "kontak": "0856-7890-1234",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 6,
-        "nama": "Sate Kambing Muda Haji Ujang",
-        "lokasi": "Karang Timur",
-        "kategori": "Sate",
-        "harga": "Rp 25.000 - 40.000",
-        "kelebihan": "Sate kambing muda empuk, bumbu kacang spesial.",
-        "kekurangan": "Harga agak tinggi.",
-        "rating": 4.7,
-        "status": "🔥 Legend",
-        "jam_buka": "17.00 - 22.00",
-        "jadwal_buka": "Setiap Hari (17.00 - 22.00)",
-        "review_warga": "Sate kambing terbaik!",
-        "alamat": "Jl. Karang Timur Raya, Karang Timur",
-        "kontak": "0812-5678-9012",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 7,
-        "nama": "Nasi Uduk Betawi Haji Mamat",
-        "lokasi": "Sudimara Timur",
-        "kategori": "Nasi Uduk",
-        "harga": "Rp 15.000 - 25.000",
-        "kelebihan": "Nasi uduk gurih, semur jengkol mantap.",
-        "kekurangan": "Parkir agak sempit.",
-        "rating": 4.4,
-        "status": "👍 Review Bagus",
-        "jam_buka": "06.00 - 14.00",
-        "jadwal_buka": "Setiap Hari (06.00 - 14.00)",
-        "review_warga": "Sarapan favorit warga Ciledug!",
-        "alamat": "Jl. Raya Ciledug No. 45, Sudimara Timur",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 8,
-        "nama": "Warung Soto Betawi Ibu Ani",
-        "lokasi": "Sudimara Selatan",
-        "kategori": "Soto",
-        "harga": "Rp 12.000 - 18.000",
-        "kelebihan": "Soto Betawi kuah santan gurih, daging melimpah.",
-        "kekurangan": "Tempat sederhana.",
-        "rating": 4.2,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "08.00 - 15.00",
-        "jadwal_buka": "Senin - Sabtu (08.00 - 15.00), Minggu Tutup",
-        "review_warga": "Soto Betawi paling enak!",
-        "alamat": "Jl. Haji Usman, Sudimara Selatan",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 9,
-        "nama": "Gado-gado Pak Eko",
-        "lokasi": "Tajur",
-        "kategori": "Gado-gado",
-        "harga": "Rp 12.000 - 18.000",
-        "kelebihan": "Bumbu kacang kental, sayuran segar.",
-        "kekurangan": "Parkir terbatas.",
-        "rating": 4.4,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "08.00 - 17.00",
-        "jadwal_buka": "Senin - Jumat (08.00 - 17.00), Sabtu - Minggu Tutup",
-        "review_warga": "Gado-gado terenak!",
-        "alamat": "Jl. Tajur Raya, Tajur",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 10,
-        "nama": "Warung Nasi Padang Minang Jaya",
-        "lokasi": "Parung Serab",
-        "kategori": "Padang",
-        "harga": "Rp 15.000 - 30.000",
-        "kelebihan": "Rendang empuk, ayam pop gurih.",
-        "kekurangan": "Tempat sederhana.",
-        "rating": 4.3,
-        "status": "👍 Review Bagus",
-        "jam_buka": "10.00 - 21.00",
-        "jadwal_buka": "Setiap Hari (10.00 - 21.00)",
-        "review_warga": "Rendangnya juara!",
-        "alamat": "Jl. Parung Serab, Parung Serab",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-01"
-    },
-    {
-        "id": 11,
-        "nama": "Pecel Ayam Mbok Darmi",
-        "lokasi": "Sudimara Jaya",
-        "kategori": "Pecel Ayam",
-        "harga": "Rp 15.000 - 22.000",
-        "kelebihan": "Pecel ayam dengan sambal kacang kental.",
-        "kekurangan": "Tempat sederhana.",
-        "rating": 4.3,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "08.00 - 17.00",
-        "jadwal_buka": "Selasa - Minggu (08.00 - 17.00), Senin Tutup",
-        "review_warga": "Pecel ayam enak, sambalnya mantap!",
-        "alamat": "Jl. Sudimara Jaya No. 23",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-08"
-    },
-    {
-        "id": 12,
-        "nama": "Pecel Lele Mbah Giyem",
-        "lokasi": "Karang Mulya",
-        "kategori": "Pecel Lele",
-        "harga": "Rp 12.000 - 18.000",
-        "kelebihan": "Lele goreng crispy, sambal terasi pedas.",
-        "kekurangan": "Warung kecil.",
-        "rating": 4.2,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "10.00 - 21.00",
-        "jadwal_buka": "Setiap Hari (10.00 - 21.00)",
-        "review_warga": "Lele kriuk-kriuk, sambalnya juara!",
-        "alamat": "Jl. Karang Mulya No. 45",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-08"
-    },
-    {
-        "id": 13,
-        "nama": "Ayam Goreng Mbok Minah",
-        "lokasi": "Larangan Selatan",
-        "kategori": "Ayam Goreng",
-        "harga": "Rp 18.000 - 25.000",
-        "kelebihan": "Ayam goreng kampung, bumbu rempah gurih.",
-        "kekurangan": "Tempat sederhana.",
-        "rating": 4.4,
-        "status": "⭐ Hidden Gem",
-        "jam_buka": "11.00 - 20.00",
-        "jadwal_buka": "Senin - Sabtu (11.00 - 20.00), Minggu Tutup",
-        "review_warga": "Ayam kampung, gurih banget!",
-        "alamat": "Jl. Larangan Selatan No. 78",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-08"
-    },
-    {
-        "id": 14,
-        "nama": "Bubur Ayam Mas Untung",
-        "lokasi": "Ciledug",
-        "kategori": "Bubur Ayam",
-        "harga": "Rp 11.000",
-        "kelebihan": "Bubur lembut, topping ayam suwiran.",
-        "kekurangan": "Cepat habis sebelum jam 8 pagi.",
-        "rating": 4.3,
-        "status": "👍 Review Bagus",
-        "jam_buka": "06.00 - 08.00",
-        "jadwal_buka": "Setiap Hari (06.00 - 08.00)",
-        "review_warga": "Enak dan murah!",
-        "alamat": "Depan RS Bhakti Asih, Ciledug",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-09"
-    },
-    {
-        "id": 15,
-        "nama": "Nasi Bebek Madura Mas Kholil",
-        "lokasi": "Sudimara Barat",
-        "kategori": "Nasi Bebek",
-        "harga": "Rp 1.000 - 25.000",
-        "kelebihan": "Bebek juicy ga amis, bumbu item enak, sambel bawang enak",
-        "kekurangan": "Tempat sederhana",
-        "rating": 3.0,
-        "status": "💎 Underrated",
-        "jam_buka": "17.00 - 23.00",
-        "jadwal_buka": "Setiap Hari (17.00 - 23.00)",
-        "review_warga": "Nasi bebeknya best, langganan dari dulu",
-        "alamat": "Jl. Raden Patah No.13, Sudimara Barat",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-09"
-    },
-    {
-        "id": 16,
-        "nama": "Bubur Ayam Panji",
-        "lokasi": "Sudimara Barat",
-        "kategori": "Bubur Ayam",
-        "harga": "Rp 1.000 - 25.000",
-        "kelebihan": "Bubur legendaris, sudah 28 tahun",
-        "kekurangan": "Tempat sederhana",
-        "rating": 4.5,
-        "status": "🔥 Legend",
-        "jam_buka": "06.00 - 10.00",
-        "jadwal_buka": "Setiap Hari (06.00 - 10.00)",
-        "review_warga": "Rasanya selalu top markotop",
-        "alamat": "Jl. Sudimara Barat, dekat pasar",
-        "kontak": "-",
-        "lat": None,
-        "lon": None,
-        "ditambahkan_oleh": "Admin",
-        "tanggal_ditambahkan": "2026-09-09"
-    }
-]
+if 'warung_ciledug' not in st.session_state:
+    st.session_state.warung_ciledug = load_all_warung()
 
 # ============================================
 # 🗺️ MAP
@@ -436,18 +124,6 @@ def tampilkan_map(warung_list):
         return m
     except:
         return None
-
-# ============================================
-# 📦 LOAD & SEED DATA
-# ============================================
-if 'warung_ciledug' not in st.session_state:
-    data = load_all_warung()
-    if not data:
-        # Seed data default
-        for w in DEFAULT_WARUNG:
-            save_warung(w)
-        data = load_all_warung()
-    st.session_state.warung_ciledug = data
 
 # ============================================
 # 📍 KONFIGURASI
@@ -567,20 +243,22 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
-# 📱 CSS RAMAH HP
+# 📱 CSS RAMAH HP + JUDUL BESAR
 st.markdown("""
     <style>
     .main-title {
-        font-size: 32px !important;
+        font-size: 48px !important;
         font-weight: 800;
         color: #D97706;
         text-align: center;
+        margin-top: 10px;
     }
     .sub-title {
         text-align: center;
         color: #4B5563;
         font-style: italic;
         margin-bottom: 20px;
+        font-size: 16px;
     }
     .footer {
         text-align: center;
@@ -602,8 +280,14 @@ st.markdown("""
         background: #3367D6;
         color: white !important;
     }
+    .total-warung {
+        text-align: center;
+        font-size: 18px;
+        color: #4B5563;
+        margin-bottom: 10px;
+    }
     @media (max-width: 600px) {
-        .main-title { font-size: 24px !important; }
+        .main-title { font-size: 32px !important; }
         .sub-title { font-size: 14px !important; }
         .stTextInput input { font-size: 16px !important; }
         .stTextArea textarea { font-size: 16px !important; }
@@ -612,6 +296,7 @@ st.markdown("""
             padding: 12px !important;
         }
         .warung-card { padding: 10px !important; }
+        .total-warung { font-size: 16px; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -619,26 +304,21 @@ st.markdown("""
 st.markdown('<h1 class="main-title">🍲 Ciledug Food AI</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
 
-# Statistik
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("🏪 Total", len(st.session_state.warung_ciledug))
-col2.metric("💎 Underrated", sum(1 for w in st.session_state.warung_ciledug if "Underrated" in w.get("status", "")))
-col3.metric("⭐ Hidden", sum(1 for w in st.session_state.warung_ciledug if "Hidden Gem" in w.get("status", "")))
-col4.metric("🔥 Legend", sum(1 for w in st.session_state.warung_ciledug if "Legend" in w.get("status", "")))
-col5.metric("📱 Viral", sum(1 for w in st.session_state.warung_ciledug if "Viral" in w.get("status", "")))
+# Total Warung (hanya 1 baris)
+st.markdown(f'<p class="total-warung">🏪 Total Kuliner: {len(st.session_state.warung_ciledug)}</p>', unsafe_allow_html=True)
 
 st.markdown("---")
 
 # ============================================
-# 🗂️ TAB
+# 🗂️ TAB (NAMA DIUBAH LEBIH ELEGAN!)
 # ============================================
-tab1, tab2, tab3 = st.tabs(["🔍 Cari Warung", "➕ Tambah Warung", "⚙️ Kelola Data"])
+tab1, tab2, tab3 = st.tabs(["🔍 Cari Kuliner", "➕ Rekomendasikan Tempat", "📋 Admin Panel"])
 
 # ============================================
-# TAB 1: CARI WARUNG
+# TAB 1: CARI KULINER
 # ============================================
 with tab1:
-    st.markdown("### 🗺️ Cari Warung Makan")
+    st.markdown("### 🗺️ Cari Kuliner")
     st.caption("💡 Cukup tulis makanan yang kamu cari, AI akan mencarikan untukmu!")
     
     with st.form("search_form"):
@@ -649,20 +329,20 @@ with tab1:
         submitted = st.form_submit_button("🔍 Cari Rekomendasi", use_container_width=True)
     
     if submitted and prompt_user:
-        with st.spinner("🔍 Mencari warung..."):
+        with st.spinner("🔍 Mencari kuliner..."):
             warung_ditemukan, kategori_terdeteksi = cari_warung(lokasi, prompt_user)
             if warung_ditemukan:
                 if kategori_terdeteksi:
-                    st.info(f"🔍 Menemukan {len(warung_ditemukan)} warung {kategori_terdeteksi} di **{lokasi}**")
+                    st.info(f"🔍 Menemukan {len(warung_ditemukan)} {kategori_terdeteksi} di **{lokasi}**")
                 else:
-                    st.info(f"🔍 Menemukan {len(warung_ditemukan)} warung di **{lokasi}**")
+                    st.info(f"🔍 Menemukan {len(warung_ditemukan)} kuliner di **{lokasi}**")
                 
                 jawaban_ai = panggil_ai(API_KEY_FIX, warung_ditemukan, prompt_user, lokasi)
                 st.markdown("### 🤖 Rekomendasi AI:")
                 st.markdown(jawaban_ai)
                 
                 st.markdown("---")
-                st.markdown(f"### 📋 Detail Warung yang Ditemukan ({len(warung_ditemukan)} warung)")
+                st.markdown(f"### 📋 Detail Kuliner yang Ditemukan ({len(warung_ditemukan)} tempat)")
                 
                 for w in warung_ditemukan:
                     status = w.get("status", "👍 Review Bagus")
@@ -691,8 +371,8 @@ with tab1:
                         gmaps_link = f'<a href="https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(query)}" target="_blank" class="gmaps-link">🗺️ Buka di Google Maps</a>'
                     
                     st.markdown(f"""
-                    <div style="background: {bg}; padding: 14px; border-radius: 8px; margin-bottom: 12px;">
-                        <b>{w['nama']}</b> <span style="background: {bg}; padding: 2px 10px; border-radius: 12px; font-size: 12px;">{badge}</span><br>
+                    <div style="background: {bg}; padding: 14px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid {bg};">
+                        <b>{w['nama']}</b> <span style="background: {bg}; padding: 2px 10px; border-radius: 12px; font-size: 12px; border: 1px solid #ddd;">{badge}</span><br>
                         📍 {w['lokasi']} | 💰 {w['harga']} | ⭐ {w['rating']}<br>
                         📅 {w.get('jadwal_buka', w.get('jam_buka', 'Tidak ada info'))}<br>
                         📝 {w.get('review_warga', '')}<br>
@@ -701,7 +381,7 @@ with tab1:
                     """, unsafe_allow_html=True)
                 
                 st.markdown("---")
-                st.markdown("### 🗺️ Peta Lokasi Warung")
+                st.markdown("### 🗺️ Peta Lokasi Kuliner")
                 ada_koordinat = any(w.get('lat') and w.get('lon') for w in warung_ditemukan)
                 if ada_koordinat:
                     try:
@@ -711,27 +391,27 @@ with tab1:
                     except:
                         st.info("📝 Tidak ada koordinat valid.")
                 else:
-                    st.info("📝 Belum ada koordinat. Tambahkan di menu Kelola Data.")
+                    st.info("📝 Belum ada koordinat. Tambahkan di Admin Panel.")
             else:
-                st.warning("😔 Belum ada warung yang cocok.")
+                st.warning("😔 Belum ada kuliner yang cocok.")
     elif submitted and not prompt_user:
         st.warning("⚠️ Tuliskan makanan yang kamu cari dulu ya!")
 
 # ============================================
-# TAB 2: TAMBAH WARUNG
+# TAB 2: REKOMENDASIKAN TEMPAT
 # ============================================
 with tab2:
-    st.markdown("### ➕ Tambah Warung Makan")
-    st.info("📝 Data akan tersimpan di Supabase Cloud (permanen!)")
+    st.markdown("### ➕ Rekomendasikan Tempat Kuliner")
+    st.info("📝 Bantu warga Ciledug menemukan tempat kuliner favoritmu! Data akan tersimpan permanen di Supabase Cloud.")
     with st.form("tambah_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            nama = st.text_input("🏪 Nama Warung *")
+            nama = st.text_input("🏪 Nama Tempat *")
             lokasi = st.selectbox("📍 Lokasi *", WILAYAH_CILEDUG[1:])
             kategori = st.selectbox("🍽️ Kategori *", KATEGORI)
             alamat = st.text_input("📌 Alamat Lengkap *")
         with col2:
-            harga = st.text_input("💰 Harga *")
+            harga = st.text_input("💰 Kisaran Harga *")
             jam = st.text_input("🕐 Jam Buka")
             jadwal = st.text_input("📅 Jadwal Buka Lengkap *")
             kontak = st.text_input("📞 Kontak")
@@ -740,12 +420,12 @@ with tab2:
         st.markdown("#### 🏷️ Status")
         col_s1, col_s2 = st.columns(2)
         with col_s1:
-            s_underrated = st.checkbox("💎 Underrated")
-            s_hidden = st.checkbox("⭐ Hidden Gem")
-            s_legend = st.checkbox("🔥 Legend")
+            s_underrated = st.checkbox("💎 Underrated (Enak, rating rendah)")
+            s_hidden = st.checkbox("⭐ Hidden Gem (Enak, jarang diketahui)")
+            s_legend = st.checkbox("🔥 Legend (Jualan > 10 tahun)")
         with col_s2:
-            s_review = st.checkbox("👍 Review Bagus")
-            s_viral = st.checkbox("📱 Viral")
+            s_review = st.checkbox("👍 Review Bagus (Rating Google bagus)")
+            s_viral = st.checkbox("📱 Viral (Lagi ramai medsos)")
         
         if s_underrated:
             status = "💎 Underrated"
@@ -799,20 +479,20 @@ with tab2:
                 }
                 save_warung(data_baru)
                 st.session_state.warung_ciledug = load_all_warung()
-                st.success(f"✅ **{nama}** berhasil ditambahkan! Total: {len(st.session_state.warung_ciledug)}")
+                st.success(f"✅ **{nama}** berhasil ditambahkan! Total kuliner: {len(st.session_state.warung_ciledug)}")
                 st.balloons()
 
 # ============================================
-# TAB 3: KELOLA DATA
+# TAB 3: ADMIN PANEL
 # ============================================
 with tab3:
-    st.markdown("### ⚙️ Kelola Data Warung")
+    st.markdown("### 📋 Admin Panel - Kelola Data Kuliner")
     st.warning("⚠️ Perubahan akan tersimpan permanen di Supabase Cloud!")
     if not st.session_state.warung_ciledug:
         st.info("Belum ada data.")
     else:
         daftar_warung = [f"{w['id']}. {w['nama']} ({w['lokasi']})" for w in st.session_state.warung_ciledug]
-        pilihan = st.selectbox("Pilih warung:", daftar_warung)
+        pilihan = st.selectbox("Pilih tempat kuliner:", daftar_warung)
         if pilihan:
             warung_id = int(pilihan.split('.')[0])
             warung = next((w for w in st.session_state.warung_ciledug if w["id"] == warung_id), None)
@@ -889,7 +569,7 @@ with tab3:
                         if confirm:
                             delete_warung(warung_id)
                             st.session_state.warung_ciledug = load_all_warung()
-                            st.success("🗑️ Warung berhasil dihapus!")
+                            st.success("🗑️ Tempat kuliner berhasil dihapus!")
                             st.rerun()
 
 # ============================================
