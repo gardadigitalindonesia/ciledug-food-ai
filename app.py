@@ -322,7 +322,7 @@ st.markdown("""
 # ===== LOGO + JUDUL =====
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
-    st.image("Images/logo.png", width=60)
+st.image("Images/logo.png", width=60)
 with col_title:
 st.markdown('<h1 class="main-title" style="margin-top: 0px;">Ciledug Food AI</h1>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
