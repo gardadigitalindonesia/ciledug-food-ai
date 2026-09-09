@@ -6,6 +6,7 @@ import folium
 from streamlit_folium import folium_static
 from datetime import datetime
 import urllib.parse
+import base64
 
 # ============================================
 # 🔑 CREDENTIALS (dari Streamlit Secrets)
@@ -320,12 +321,22 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===== LOGO + JUDUL =====
-st.markdown("""
-<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-    <img src="data:image/png;base64,{}" width="70" style="display: block; margin: 0 auto;">
-    <h1 class="main-title" style="margin-top: 5px; text-align: center;">Ciledug Food AI</h1>
-</div>
-""".format(st.image("Images/logo.png", width=70)), unsafe_allow_html=True)
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+
+try:
+    logo_base64 = get_base64_image("Images/logo.png")
+    st.markdown(f"""
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+        <img src="data:image/png;base64,{logo_base64}" width="70" style="display: block; margin: 0 auto;">
+        <h1 class="main-title" style="margin-top: 5px; text-align: center;">Ciledug Food AI</h1>
+    </div>
+    """, unsafe_allow_html=True)
+except:
+    # Kalau logo ga ada, tampilkan emoji
+    st.markdown('<p style="text-align: center; font-size: 48px; margin-bottom: -15px;">🍲</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title" style="text-align: center;">Ciledug Food AI</h1>', unsafe_allow_html=True)
 
 st.markdown("---")
 
