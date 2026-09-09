@@ -320,7 +320,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ===== LOGO + JUDUL =====
+# ===== LOGO + JUDUL + SUBTITLE =====
 def get_base64_image(image_path):
     with open(image_path, "rb") as img_file:
         return base64.b64encode(img_file.read()).decode()
@@ -331,12 +331,13 @@ try:
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
         <img src="data:image/png;base64,{logo_base64}" width="70" style="display: block; margin: 0 auto;">
         <h1 class="main-title" style="margin-top: 5px; text-align: center;">Ciledug Food AI</h1>
+        <p class="sub-title" style="text-align: center; color: #4B5563; font-style: italic; margin-top: -10px; font-size: 18px;">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>
     </div>
     """, unsafe_allow_html=True)
 except:
-    # Kalau logo ga ada, tampilkan emoji
     st.markdown('<p style="text-align: center; font-size: 48px; margin-bottom: -15px;">🍲</p>', unsafe_allow_html=True)
     st.markdown('<h1 class="main-title" style="text-align: center;">Ciledug Food AI</h1>', unsafe_allow_html=True)
+    st.markdown('<p class="sub-title" style="text-align: center; color: #4B5563; font-style: italic; font-size: 18px;">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
 
 st.markdown("---")
 
