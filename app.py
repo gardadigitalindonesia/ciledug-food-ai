@@ -153,7 +153,7 @@ STATUS_WARUNG = [
 ]
 
 # ============================================
-# 🔍 FUNGSI CARI
+# 🔍 FUNGSI CARI (PINTAH: CEK NAMA & KEHLEBIHAN JUGA)
 # ============================================
 def deteksi_kategori_dari_prompt(prompt):
     prompt_lower = prompt.lower()
@@ -193,7 +193,7 @@ def cari_warung(lokasi_user, prompt_user):
             if lokasi_user.lower() not in warung["lokasi"].lower():
                 cocok = False
         
-        # 🔥 FILTER KATEGORI + KEYWORD (LEBIH PINTAR!)
+        # Filter kategori + keyword (lebih pintar!)
         if kategori_terdeteksi:
             # Cek di kategori (prioritas utama)
             cocok_kategori = warung["kategori"].lower() == kategori_terdeteksi.lower()
@@ -282,8 +282,33 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
+# 📱 CSS + SEMBUNYIKAN HEADER
 st.markdown("""
     <style>
+    /* SEMBUNYIKAN HEADER STREAMLIT (GITHUB ICON + MANAGE APP) */
+    .stApp > header {
+        display: none !important;
+    }
+    .stAppDeployButton {
+        display: none !important;
+    }
+    .stApp > .stButton {
+        display: none !important;
+    }
+    .stAppFooter {
+        display: none !important;
+    }
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    .stDeployButton {
+        display: none !important;
+    }
+    .stAppViewBlockContainer .stButton {
+        display: none !important;
+    }
+    
+    /* CSS UTAMA */
     .main-title {
         font-size: 64px !important;
         font-weight: 900 !important;
@@ -511,7 +536,7 @@ with tab2:
             if not nama or not lokasi or not kategori or not harga or not alamat or not jadwal:
                 st.warning("⚠️ Isi semua field bertanda *")
             else:
-                # 🔥 PERBAIKAN: Validasi koordinat
+                # Validasi koordinat
                 try:
                     lat_val = float(lat_input) if lat_input and lat_input.strip() else None
                 except ValueError:
