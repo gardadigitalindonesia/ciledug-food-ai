@@ -597,7 +597,7 @@ st.markdown("""
     <div style="background: #FEF3C7; padding: 20px; border-radius: 12px; border: 1px solid #F59E0B; text-align: center;">
         <p style="font-weight: bold; color: #B45309; font-size: 16px;">❤️ Dukung Aplikasi Ini Tetap Gratis & Bebas Iklan</p>
         <p style="font-size: 13px; color: #78350F;">Aplikasi ini 100% gratis untuk warga Ciledug Raya. Kalau bermanfaat, traktir admin kopi ☕</p>
-        <a href="https://trakteer.id" target="_blank" style="background: #F59E0B; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">☕ Traktir Kopi di Trakteer</a>
+        <a href="https://trakteer.id/garda_digital" target="_blank" style="background: #F59E0B; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">☕ Traktir Kopi di Trakteer</a>
     </div>
 """, unsafe_allow_html=True)
 
