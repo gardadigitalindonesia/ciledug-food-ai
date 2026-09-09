@@ -638,7 +638,7 @@ elif st.session_state.tab == 2:
             
             if st.button("🔓 Login", use_container_width=True):
                 # 🔥 GANTI PASSWORDNYA DI SINI!
-                ADMIN_PASSWORD = "ciledug2026"  # Ganti dengan password pilihanmu
+                ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
                 
                 if password_input == ADMIN_PASSWORD:
                     st.session_state.admin_logged_in = True
