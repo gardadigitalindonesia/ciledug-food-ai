@@ -7,6 +7,8 @@ from streamlit_folium import folium_static
 from datetime import datetime
 import urllib.parse
 import base64
+from google import genai
+from google.genai import types
 
 # ============================================
 # 🔑 CREDENTIALS (dari Streamlit Secrets)
@@ -138,7 +140,7 @@ WILAYAH_CILEDUG = [
 ]
 
 # ============================================
-# 🍽️ KATEGORI (DENGAN KETOPRAK & SOTO)
+# 🍽️ KATEGORI
 # ============================================
 KATEGORI = [
     "Mie Ayam", "Nasi Goreng", "Bakso", "Sate", "Nasi Uduk", 
@@ -205,11 +207,14 @@ def cari_warung(lokasi_user, prompt_user):
     return semua_warung, kategori_terdeteksi
 
 # ============================================
-# 🤖 PANGGIL AI
+# 🤖 PANGGIL AI DENGAN GROUNDING (INTERNET)
 # ============================================
-def panggil_ai(api_key, data_warung, prompt_user, lokasi_user):
+def panggil_ai_dengan_grounding(api_key, data_warung, prompt_user, lokasi_user):
     if not data_warung:
         return "Maaf, belum ada data warung yang cocok. Bantu kami tambahkan data ya! 🙏"
+    
+    # Konteks dari database lokal (RAG)
+    konteks_lokal = json.dumps(data_warung, indent=2, ensure_ascii=False)
     
     prompt = f"""
 Kamu adalah asisten kuliner Ciledug Raya yang RAMAH, JUJUR, dan ADIL.
@@ -217,49 +222,49 @@ Kamu adalah asisten kuliner Ciledug Raya yang RAMAH, JUJUR, dan ADIL.
 LOKASI: {lokasi_user if lokasi_user else "Ciledug Raya"}
 PERTANYAAN: {prompt_user}
 
-DATA WARUNG:
-{json.dumps(data_warung, indent=2, ensure_ascii=False)}
+DATA WARUNG LOKAL (dari database kami):
+{konteks_lokal}
 
 TUGAS:
-1. Rekomendasi berdasarkan data di atas
+1. Berikan rekomendasi dari DATA LOKAL terlebih dahulu (ini prioritas utama!)
 2. PRIORITAS: Underrated → Hidden Gem → Legend → Review Bagus → Viral
 3. Sebutkan kelebihan, kekurangan, jadwal buka
-4. Gaya bahasa santai seperti ngobrol sama tetangga
+4. Kalau data lokal kurang, cari tambahan dari internet
+5. Kalau pakai info dari internet, sebutkan sumbernya (URL)
+6. Gaya bahasa santai seperti ngobrol sama tetangga
 
 JAWABAN:
 """
     
-    model = "gemini-3.6-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-    headers = {
-        "x-goog-api-key": api_key,
-        "Content-Type": "application/json"
-    }
-    data = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-    
-    for percobaan in range(3):
-        try:
-            time.sleep(2)
-            response = requests.post(url, headers=headers, json=data, timeout=60)
+    try:
+        # 🔥 PAKAI GEMINI 3.6 FLASH + GROUNDING
+        client = genai.Client(api_key=api_key)
+        
+        # Aktifkan Google Search Grounding
+        grounding_tool = types.Tool(google_search=types.GoogleSearch())
+        
+        config = types.GenerateContentConfig(
+            tools=[grounding_tool]
+        )
+        
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt,
+            config=config
+        )
+        
+        # Cek apakah grounding digunakan
+        if response.candidates and response.candidates[0].grounding_metadata:
+            grounding_info = "\n\n---\n📎 **Sumber informasi dari internet:**\n"
+            for source in response.candidates[0].grounding_metadata.web_search_queries:
+                grounding_info += f"- 🔍 {source}\n"
+            return response.text + grounding_info
+        else:
+            return response.text
             
-            if response.status_code == 200:
-                hasil = response.json()
-                return hasil['candidates'][0]['content']['parts'][0]['text']
-            else:
-                return f"❌ **Error Gemini API**\n\nStatus: {response.status_code}\n\n{response.text[:300]}"
-                
-        except requests.exceptions.Timeout:
-            if percobaan < 2:
-                continue
-            else:
-                return "❌ **Koneksi Timeout**\n\nServer Gemini tidak merespon setelah 60 detik.\n\n💡 Coba lagi nanti ya! 🙏"
-                
-        except Exception as e:
-            return f"❌ **Error Koneksi:** {str(e)}"
-    
-    return "❌ Gagal setelah 3 kali percobaan. Coba lagi nanti."
+    except Exception as e:
+        # Fallback ke panggilan biasa (tanpa grounding)
+        return f"❌ **Error Grounding:** {str(e)}\n\n💡 Coba lagi nanti atau tanpa grounding."
 
 # ============================================
 # 🏠 TAMPILAN UTAMA
@@ -312,6 +317,15 @@ st.markdown("""
         margin-bottom: 10px;
         font-weight: 500;
     }
+    .grounding-badge {
+        background: #DBEAFE;
+        color: #1E40AF;
+        padding: 2px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        display: inline-block;
+        margin-left: 8px;
+    }
     @media (max-width: 600px) {
         .main-title { font-size: 36px !important; }
         .sub-title { font-size: 14px !important; }
@@ -352,30 +366,42 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["🔍 Cari Kuliner", "➕ Rekomendasikan Tempat", "📋 Admin Panel"])
 
 # ============================================
-# TAB 1: CARI KULINER
+# TAB 1: CARI KULINER (DENGAN GROUNDING!)
 # ============================================
 with tab1:
     st.markdown("### 🗺️ Cari Kuliner")
-    st.caption("💡 Cukup tulis makanan yang kamu cari, AI akan mencarikan untukmu!")
+    st.caption("💡 Cukup tulis makanan yang kamu cari, AI akan mencarikan untukmu! 🌐 AI juga bisa cari info dari internet.")
     
     with st.form("search_form"):
         lokasi = st.selectbox("📍 Lokasi Pencarian Kuliner:", WILAYAH_CILEDUG, index=0)
         prompt_user = st.text_area("💬 Mau makan apa?", 
                                    placeholder="Contoh: 'Cari ketoprak enak di Ciledug'", 
                                    height=80)
+        
+        # Opsi grounding
+        use_grounding = st.checkbox("🌐 Cari info dari internet juga (Grounding)", value=True)
+        
         submitted = st.form_submit_button("🔍 Cari Rekomendasi", use_container_width=True)
     
     if submitted and prompt_user:
         with st.spinner("🔍 Mencari kuliner..."):
             warung_ditemukan, kategori_terdeteksi = cari_warung(lokasi, prompt_user)
+            
             if warung_ditemukan:
                 if kategori_terdeteksi:
                     st.info(f"🔍 Menemukan {len(warung_ditemukan)} {kategori_terdeteksi} di **{lokasi}**")
                 else:
                     st.info(f"🔍 Menemukan {len(warung_ditemukan)} kuliner di **{lokasi}**")
                 
-                jawaban_ai = panggil_ai(API_KEY_FIX, warung_ditemukan, prompt_user, lokasi)
-                st.markdown("### 🤖 Rekomendasi AI:")
+                # Panggil AI dengan atau tanpa grounding
+                if use_grounding:
+                    jawaban_ai = panggil_ai_dengan_grounding(API_KEY_FIX, warung_ditemukan, prompt_user, lokasi)
+                    st.markdown("### 🤖 Rekomendasi AI 🌐")
+                else:
+                    # Fallback ke panggilan biasa (tanpa grounding)
+                    jawaban_ai = panggil_ai_biasa(API_KEY_FIX, warung_ditemukan, prompt_user, lokasi)
+                    st.markdown("### 🤖 Rekomendasi AI")
+                
                 st.markdown(jawaban_ai)
                 
                 st.markdown("---")
@@ -433,6 +459,63 @@ with tab1:
                 st.warning("😔 Belum ada kuliner yang cocok.")
     elif submitted and not prompt_user:
         st.warning("⚠️ Tuliskan makanan yang kamu cari dulu ya!")
+
+# ============================================
+# 🤖 PANGGIL AI BIASA (TANPA GROUNDING)
+# ============================================
+def panggil_ai_biasa(api_key, data_warung, prompt_user, lokasi_user):
+    if not data_warung:
+        return "Maaf, belum ada data warung yang cocok. Bantu kami tambahkan data ya! 🙏"
+    
+    prompt = f"""
+Kamu adalah asisten kuliner Ciledug Raya yang RAMAH, JUJUR, dan ADIL.
+
+LOKASI: {lokasi_user if lokasi_user else "Ciledug Raya"}
+PERTANYAAN: {prompt_user}
+
+DATA WARUNG:
+{json.dumps(data_warung, indent=2, ensure_ascii=False)}
+
+TUGAS:
+1. Rekomendasi berdasarkan data di atas
+2. PRIORITAS: Underrated → Hidden Gem → Legend → Review Bagus → Viral
+3. Sebutkan kelebihan, kekurangan, jadwal buka
+4. Gaya bahasa santai seperti ngobrol sama tetangga
+
+JAWABAN:
+"""
+    
+    model = "gemini-3.6-flash"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {
+        "x-goog-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}]
+    }
+    
+    for percobaan in range(3):
+        try:
+            time.sleep(2)
+            response = requests.post(url, headers=headers, json=data, timeout=60)
+            
+            if response.status_code == 200:
+                hasil = response.json()
+                return hasil['candidates'][0]['content']['parts'][0]['text']
+            else:
+                return f"❌ **Error Gemini API**\n\nStatus: {response.status_code}\n\n{response.text[:300]}"
+                
+        except requests.exceptions.Timeout:
+            if percobaan < 2:
+                continue
+            else:
+                return "❌ **Koneksi Timeout**\n\nServer Gemini tidak merespon setelah 60 detik.\n\n💡 Coba lagi nanti ya! 🙏"
+                
+        except Exception as e:
+            return f"❌ **Error Koneksi:** {str(e)}"
+    
+    return "❌ Gagal setelah 3 kali percobaan. Coba lagi nanti."
 
 # ============================================
 # TAB 2: REKOMENDASIKAN TEMPAT
