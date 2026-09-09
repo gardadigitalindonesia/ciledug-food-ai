@@ -184,21 +184,40 @@ def deteksi_kategori_dari_prompt(prompt):
 def cari_warung(lokasi_user, prompt_user):
     semua_warung = []
     kategori_terdeteksi = deteksi_kategori_dari_prompt(prompt_user)
+    
     for warung in st.session_state.warung_ciledug:
         cocok = True
+        
+        # Filter lokasi
         if lokasi_user != "Semua Ciledug Raya":
             if lokasi_user.lower() not in warung["lokasi"].lower():
                 cocok = False
+        
+        # 🔥 FILTER KATEGORI + KEYWORD (LEBIH PINTAR!)
         if kategori_terdeteksi:
-            if warung["kategori"].lower() != kategori_terdeteksi.lower():
+            # Cek di kategori (prioritas utama)
+            cocok_kategori = warung["kategori"].lower() == kategori_terdeteksi.lower()
+            
+            # Cek di nama warung
+            cocok_nama = kategori_terdeteksi.lower() in warung["nama"].lower()
+            
+            # Cek di kelebihan warung
+            cocok_kelebihan = kategori_terdeteksi.lower() in warung["kelebihan"].lower()
+            
+            # Kalau ga cocok di manapun, skip
+            if not (cocok_kategori or cocok_nama or cocok_kelebihan):
                 cocok = False
+        
         if cocok:
             semua_warung.append(warung)
+    
+    # Urutkan berdasarkan prioritas
     urutan_prioritas = {
         "💎 Underrated": 1, "⭐ Hidden Gem": 2,
         "🔥 Legend": 3, "👍 Review Bagus": 4, "📱 Viral": 5
     }
     semua_warung = sorted(semua_warung, key=lambda x: urutan_prioritas.get(x.get("status", ""), 99))
+    
     return semua_warung, kategori_terdeteksi
 
 # ============================================
