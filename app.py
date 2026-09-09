@@ -601,4 +601,4 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown('<p class="footer">📱 Ramah HP | Dibuat dengan ❤️ oleh Garda Digital Indonesia untuk warga Ciledug Raya © 2026</p>', unsafe_allow_html=True)st.markdown('<p class="footer">☁️ Data tersimpan di Supabase Cloud (permanen!) | Ramah HP 📱</p>', unsafe_allow_html=True)
+st.markdown('<p class="footer">📦 Ramah HP | Dibuat dengan ❤️ oleh Garda Digital Indonesia untuk warga Ciledug Raya © 2026</p>', unsafe_allow_html=True)
