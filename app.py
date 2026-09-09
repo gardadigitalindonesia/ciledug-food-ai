@@ -137,9 +137,6 @@ WILAYAH_CILEDUG = [
     "Ciledug"
 ]
 
-# ============================================
-# 🍽️ KATEGORI (DENGAN KETOPRAK & SOTO)
-# ============================================
 KATEGORI = [
     "Mie Ayam", "Nasi Goreng", "Bakso", "Sate", "Nasi Uduk", 
     "Gado-gado", "Soto", "Padang", "Pecel Ayam", "Pecel Lele", 
@@ -266,7 +263,6 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
-# 📱 CSS
 st.markdown("""
     <style>
     .main-title {
@@ -341,7 +337,6 @@ except:
     st.markdown('<h1 class="main-title" style="text-align: center;">Ciledug Food AI</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title" style="text-align: center; color: #4B5563; font-style: italic; font-size: 18px;">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
 
-# Total Warung
 st.markdown(f'<p class="total-warung">🏪 Total Kuliner: {len(st.session_state.warung_ciledug)}</p>', unsafe_allow_html=True)
 
 st.markdown("---")
@@ -440,6 +435,7 @@ with tab1:
 with tab2:
     st.markdown("### ➕ Rekomendasikan Tempat Kuliner")
     st.info("📝 Bantu warga Ciledug menemukan tempat kuliner favoritmu! Data akan tersimpan permanen di Supabase Cloud.")
+    
     with st.form("tambah_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -478,12 +474,12 @@ with tab2:
             status = "👍 Review Bagus"
         
         st.markdown("#### 🗺️ Koordinat (Opsional)")
-        st.caption("Cari di Google Maps: Klik kanan lokasi → 'Koordinat'")
+        st.caption("Ambil dari Google Maps: Klik kanan lokasi → 'Koordinat'")
         col_lat, col_lon = st.columns(2)
         with col_lat:
-            lat = st.text_input("Latitude", placeholder="-6.2186")
+            lat_input = st.text_input("Latitude", placeholder="-6.2186", key="lat")
         with col_lon:
-            lon = st.text_input("Longitude", placeholder="106.7012")
+            lon_input = st.text_input("Longitude", placeholder="106.7012", key="lon")
         
         kelebihan = st.text_area("✅ Kelebihan")
         kekurangan = st.text_area("❌ Kekurangan")
@@ -491,18 +487,24 @@ with tab2:
         pengisi = st.text_input("👤 Nama Pengisi")
         
         submitted = st.form_submit_button("✅ Simpan", use_container_width=True)
+        
         if submitted:
             if not nama or not lokasi or not kategori or not harga or not alamat or not jadwal:
                 st.warning("⚠️ Isi semua field bertanda *")
             else:
+                # 🔥 PERBAIKAN: Validasi koordinat
                 try:
-                    lat_val = float(lat) if lat else None
-                except:
-                    lat_val = None
+                    lat_val = float(lat_input) if lat_input and lat_input.strip() else None
+                except ValueError:
+                    st.error("⚠️ Format Latitude tidak valid. Gunakan angka dengan titik, contoh: -6.2186")
+                    st.stop()
+                
                 try:
-                    lon_val = float(lon) if lon else None
-                except:
-                    lon_val = None
+                    lon_val = float(lon_input) if lon_input and lon_input.strip() else None
+                except ValueError:
+                    st.error("⚠️ Format Longitude tidak valid. Gunakan angka dengan titik, contoh: 106.7012")
+                    st.stop()
+                
                 data_baru = {
                     "id": get_next_id(),
                     "nama": nama, "lokasi": lokasi, "kategori": kategori,
@@ -557,29 +559,35 @@ with tab3:
                     st.markdown("#### 🗺️ Koordinat")
                     col_lat2, col_lon2 = st.columns(2)
                     with col_lat2:
-                        lat_edit = st.text_input("Latitude", value=str(warung.get('lat', '')) if warung.get('lat') else "")
+                        lat_edit = st.text_input("Latitude", value=str(warung.get('lat', '')) if warung.get('lat') else "", key="lat_edit")
                     with col_lon2:
-                        lon_edit = st.text_input("Longitude", value=str(warung.get('lon', '')) if warung.get('lon') else "")
+                        lon_edit = st.text_input("Longitude", value=str(warung.get('lon', '')) if warung.get('lon') else "", key="lon_edit")
                     kelebihan_edit = st.text_area("Kelebihan", value=warung.get("kelebihan", ""))
                     kekurangan_edit = st.text_area("Kekurangan", value=warung.get("kekurangan", ""))
                     review_edit = st.text_area("Review Warga", value=warung.get("review_warga", ""))
+                    
                     col_save, col_delete = st.columns(2)
                     with col_save:
                         save_clicked = st.form_submit_button("💾 Simpan", use_container_width=True)
                     with col_delete:
                         delete_clicked = st.form_submit_button("🗑️ Hapus", use_container_width=True, type="secondary")
+                    
                     if save_clicked:
                         if not nama_edit or not lokasi_edit or not kategori_edit or not harga_edit:
                             st.warning("⚠️ Isi semua field penting!")
                         else:
                             try:
-                                lat_val = float(lat_edit) if lat_edit else None
-                            except:
-                                lat_val = None
+                                lat_val = float(lat_edit) if lat_edit and lat_edit.strip() else None
+                            except ValueError:
+                                st.error("⚠️ Format Latitude tidak valid")
+                                st.stop()
+                            
                             try:
-                                lon_val = float(lon_edit) if lon_edit else None
-                            except:
-                                lon_val = None
+                                lon_val = float(lon_edit) if lon_edit and lon_edit.strip() else None
+                            except ValueError:
+                                st.error("⚠️ Format Longitude tidak valid")
+                                st.stop()
+                            
                             warung["nama"] = nama_edit
                             warung["lokasi"] = lokasi_edit
                             warung["kategori"] = kategori_edit
@@ -601,6 +609,7 @@ with tab3:
                             st.session_state.warung_ciledug = load_all_warung()
                             st.success("✅ Data berhasil diperbarui!")
                             st.rerun()
+                    
                     if delete_clicked:
                         confirm = st.checkbox("✅ Yakin hapus?")
                         if confirm:
