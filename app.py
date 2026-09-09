@@ -319,12 +319,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ===== LOGO + JUDUL (CENTERED) =====
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.image("Images/logo.png", width=70)
-    st.markdown('<h1 class="main-title" style="margin-top: 5px;">Ciledug Food AI</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
+# ===== LOGO + JUDUL =====
+st.markdown("""
+<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <img src="data:image/png;base64,{}" width="70" style="display: block; margin: 0 auto;">
+    <h1 class="main-title" style="margin-top: 5px; text-align: center;">Ciledug Food AI</h1>
+</div>
+""".format(st.image("Images/logo.png", width=70)), unsafe_allow_html=True)
 
 st.markdown("---")
 
