@@ -137,11 +137,14 @@ WILAYAH_CILEDUG = [
     "Ciledug"
 ]
 
+# ============================================
+# 🍽️ KATEGORI (DENGAN KETOPRAK & SOTO)
+# ============================================
 KATEGORI = [
     "Mie Ayam", "Nasi Goreng", "Bakso", "Sate", "Nasi Uduk", 
     "Gado-gado", "Soto", "Padang", "Pecel Ayam", "Pecel Lele", 
     "Ayam Goreng", "Seafood", "Bubur Ayam", "Ketupat Sayur",
-    "Nasi Bebek", "Lainnya"
+    "Nasi Bebek", "Ketoprak", "Nasi Campur", "Lontong Sayur", "Lainnya"
 ]
 
 STATUS_WARUNG = [
@@ -172,6 +175,9 @@ def deteksi_kategori_dari_prompt(prompt):
         "ayam goreng": "Ayam Goreng",
         "bubur ayam": "Bubur Ayam", "bubur": "Bubur Ayam",
         "ketupat": "Ketupat Sayur",
+        "ketoprak": "Ketoprak",
+        "lontong": "Lontong Sayur",
+        "nasi campur": "Nasi Campur",
     }
     for keyword, kategori in keyword_map.items():
         if keyword in prompt_lower:
@@ -199,7 +205,7 @@ def cari_warung(lokasi_user, prompt_user):
     return semua_warung, kategori_terdeteksi
 
 # ============================================
-# 🤖 PANGGIL AI (FIX: TIMEOUT 60s + RETRY 3x)
+# 🤖 PANGGIL AI
 # ============================================
 def panggil_ai(api_key, data_warung, prompt_user, lokasi_user):
     if not data_warung:
@@ -233,10 +239,9 @@ JAWABAN:
         "contents": [{"parts": [{"text": prompt}]}]
     }
     
-    # 🔥 COBA 3x DENGAN TIMEOUT 60 DETIK
     for percobaan in range(3):
         try:
-            time.sleep(2)  # Jeda antar percobaan
+            time.sleep(2)
             response = requests.post(url, headers=headers, json=data, timeout=60)
             
             if response.status_code == 200:
@@ -247,9 +252,9 @@ JAWABAN:
                 
         except requests.exceptions.Timeout:
             if percobaan < 2:
-                continue  # Coba lagi
+                continue
             else:
-                return "❌ **Koneksi Timeout**\n\nServer Gemini tidak merespon setelah 60 detik.\n\n💡 Coba lagi nanti atau cari di jam yang lebih sepi ya! 🙏"
+                return "❌ **Koneksi Timeout**\n\nServer Gemini tidak merespon setelah 60 detik.\n\n💡 Coba lagi nanti ya! 🙏"
                 
         except Exception as e:
             return f"❌ **Error Koneksi:** {str(e)}"
@@ -261,6 +266,7 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
+# 📱 CSS
 st.markdown("""
     <style>
     .main-title {
@@ -268,7 +274,7 @@ st.markdown("""
         font-weight: 900 !important;
         color: #D97706;
         text-align: center;
-        margin-top: 10px;
+        margin-top: 5px;
         letter-spacing: -1px;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
@@ -307,7 +313,7 @@ st.markdown("""
         font-weight: 500;
     }
     @media (max-width: 600px) {
-        .main-title { font-size: 40px !important; }
+        .main-title { font-size: 36px !important; }
         .sub-title { font-size: 14px !important; }
         .stTextInput input { font-size: 16px !important; }
         .stTextArea textarea { font-size: 16px !important; }
@@ -321,12 +327,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ===== LOGO + JUDUL + SUBTITLE =====
-def get_base64_image(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode()
-
 try:
-    logo_base64 = get_base64_image("Images/logo.png")
+    logo_base64 = base64.b64encode(open("Images/logo.png", "rb").read()).decode()
     st.markdown(f"""
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
         <img src="data:image/png;base64,{logo_base64}" width="70" style="display: block; margin: 0 auto;">
@@ -338,6 +340,9 @@ except:
     st.markdown('<p style="text-align: center; font-size: 48px; margin-bottom: -15px;">🍲</p>', unsafe_allow_html=True)
     st.markdown('<h1 class="main-title" style="text-align: center;">Ciledug Food AI</h1>', unsafe_allow_html=True)
     st.markdown('<p class="sub-title" style="text-align: center; color: #4B5563; font-style: italic; font-size: 18px;">Dari warga Ciledug Raya, untuk warga Ciledug Raya</p>', unsafe_allow_html=True)
+
+# Total Warung
+st.markdown(f'<p class="total-warung">🏪 Total Kuliner: {len(st.session_state.warung_ciledug)}</p>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -356,7 +361,7 @@ with tab1:
     with st.form("search_form"):
         lokasi = st.selectbox("📍 Lokasi Pencarian Kuliner:", WILAYAH_CILEDUG, index=0)
         prompt_user = st.text_area("💬 Mau makan apa?", 
-                                   placeholder="Contoh: 'Cari nasi bebek enak buat makan malam'", 
+                                   placeholder="Contoh: 'Cari ketoprak enak di Ciledug'", 
                                    height=80)
         submitted = st.form_submit_button("🔍 Cari Rekomendasi", use_container_width=True)
     
