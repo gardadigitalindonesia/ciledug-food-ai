@@ -78,6 +78,9 @@ def get_next_id():
 if 'warung_ciledug' not in st.session_state:
     st.session_state.warung_ciledug = load_all_warung()
 
+if 'tab' not in st.session_state:
+    st.session_state.tab = 0
+
 # ============================================
 # 🗺️ MAP
 # ============================================
@@ -282,7 +285,61 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
+# ============================================
+# 📊 SIDEBAR
+# ============================================
+with st.sidebar:
+    st.markdown("### 🍲 Ciledug Food AI")
+    st.markdown("---")
+    
+    # 📌 Navigasi
+    st.markdown("#### 📌 Navigasi")
+    pilihan_tab = st.radio(
+        "Pilih menu:",
+        ["🔍 Cari Kuliner", "➕ Rekomendasikan Kuliner", "🔒 Admin Panel"],
+        index=st.session_state.tab
+    )
+    
+    # Update session state
+    if pilihan_tab == "🔍 Cari Kuliner":
+        st.session_state.tab = 0
+    elif pilihan_tab == "➕ Rekomendasikan Kuliner":
+        st.session_state.tab = 1
+    elif pilihan_tab == "🔒 Admin Panel":
+        st.session_state.tab = 2
+    
+    st.markdown("---")
+    
+    # 📊 Statistik
+    st.markdown("#### 📊 Statistik Kuliner")
+    total = len(st.session_state.warung_ciledug)
+    hidden = sum(1 for w in st.session_state.warung_ciledug if "Hidden Gem" in w.get("status", ""))
+    underrated = sum(1 for w in st.session_state.warung_ciledug if "Underrated" in w.get("status", ""))
+    legend = sum(1 for w in st.session_state.warung_ciledug if "Legend" in w.get("status", ""))
+    viral = sum(1 for w in st.session_state.warung_ciledug if "Viral" in w.get("status", ""))
+    review = sum(1 for w in st.session_state.warung_ciledug if "Review Bagus" in w.get("status", ""))
+    
+    st.metric("🏪 Total", total)
+    st.metric("⭐ Hidden Gem", hidden)
+    st.metric("💎 Underrated", underrated)
+    st.metric("🔥 Legend", legend)
+    st.metric("📱 Viral", viral)
+    st.metric("👍 Review Bagus", review)
+    
+    st.markdown("---")
+    
+    # ❤️ Donasi
+    st.markdown("#### ❤️ Dukung Kami")
+    st.caption("Bantu aplikasi ini tetap gratis!")
+    st.link_button("☕ Traktir Kopi", "https://trakteer.id/garda_digital", use_container_width=True)
+    
+    st.markdown("---")
+    st.caption("📱 Ramah HP")
+    st.caption("v1.0 | Ciledug Food AI")
+
+# ============================================
 # 📱 CSS + SEMBUNYIKAN HEADER
+# ============================================
 st.markdown("""
     <style>
     /* SEMBUNYIKAN HEADER STREAMLIT (GITHUB ICON + MANAGE APP) */
@@ -386,14 +443,12 @@ st.markdown(f'<p class="total-warung">🏪 Total Kuliner: {len(st.session_state.
 st.markdown("---")
 
 # ============================================
-# 🗂️ TAB
+# 🗂️ KONTEN BERDASARKAN TAB
 # ============================================
-tab1, tab2, tab3 = st.tabs(["🔍 Cari Kuliner", "➕ Rekomendasikan Tempat", "📋 Admin Panel"])
-
-# ============================================
-# TAB 1: CARI KULINER
-# ============================================
-with tab1:
+if st.session_state.tab == 0:
+    # ============================================
+    # TAB 1: CARI KULINER
+    # ============================================
     st.markdown("### 🗺️ Cari Kuliner")
     st.caption("💡 Cukup tulis makanan yang kamu cari, AI akan mencarikan untukmu!")
     
@@ -473,10 +528,10 @@ with tab1:
     elif submitted and not prompt_user:
         st.warning("⚠️ Tuliskan makanan yang kamu cari dulu ya!")
 
-# ============================================
-# TAB 2: REKOMENDASIKAN TEMPAT
-# ============================================
-with tab2:
+elif st.session_state.tab == 1:
+    # ============================================
+    # TAB 2: REKOMENDASIKAN KULINER
+    # ============================================
     st.markdown("### ➕ Rekomendasikan Tempat Kuliner")
     st.info("📝 Bantu warga Ciledug menemukan tempat kuliner favoritmu! Data akan tersimpan permanen di Supabase Cloud.")
     
@@ -565,102 +620,151 @@ with tab2:
                 st.success(f"✅ **{nama}** berhasil ditambahkan! Total kuliner: {len(st.session_state.warung_ciledug)}")
                 st.balloons()
 
-# ============================================
-# TAB 3: ADMIN PANEL
-# ============================================
-with tab3:
-    st.markdown("### 📋 Admin Panel - Kelola Data Kuliner")
-    st.warning("⚠️ Perubahan akan tersimpan permanen di Supabase Cloud!")
-    if not st.session_state.warung_ciledug:
-        st.info("Belum ada data.")
+elif st.session_state.tab == 2:
+    # ============================================
+    # TAB 3: ADMIN PANEL (HANYA UNTUK ADMIN)
+    # ============================================
+    # 🔒 Cek login status
+    if 'admin_logged_in' not in st.session_state:
+        st.session_state.admin_logged_in = False
+    
+    if not st.session_state.admin_logged_in:
+        st.markdown("### 🔒 Admin Panel Terkunci")
+        st.caption("🔑 Masukkan password untuk mengakses Admin Panel")
+        
+        col_pass1, col_pass2, col_pass3 = st.columns([1, 2, 1])
+        with col_pass2:
+            password_input = st.text_input("Password", type="password", placeholder="Masukkan password...")
+            
+            if st.button("🔓 Login", use_container_width=True):
+                # 🔥 GANTI PASSWORDNYA DI SINI!
+                ADMIN_PASSWORD = "ciledug2026"  # Ganti dengan password pilihanmu
+                
+                if password_input == ADMIN_PASSWORD:
+                    st.session_state.admin_logged_in = True
+                    st.success("✅ Login berhasil! Selamat datang Admin!")
+                    st.rerun()
+                else:
+                    st.error("❌ Password salah! Coba lagi.")
+        
+        st.info("ℹ️ Admin Panel hanya untuk pengelola aplikasi Ciledug Food AI.")
+        
     else:
-        daftar_warung = [f"{w['id']}. {w['nama']} ({w['lokasi']})" for w in st.session_state.warung_ciledug]
-        pilihan = st.selectbox("Pilih tempat kuliner:", daftar_warung)
-        if pilihan:
-            warung_id = int(pilihan.split('.')[0])
-            warung = next((w for w in st.session_state.warung_ciledug if w["id"] == warung_id), None)
-            if warung:
-                st.markdown("---")
-                st.markdown(f"### 📝 Edit: {warung['nama']}")
-                with st.form("edit_form"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        nama_edit = st.text_input("Nama", value=warung["nama"])
-                        lokasi_edit = st.selectbox("Lokasi", WILAYAH_CILEDUG[1:], 
-                                                   index=WILAYAH_CILEDUG[1:].index(warung["lokasi"]) if warung["lokasi"] in WILAYAH_CILEDUG[1:] else 0)
-                        kategori_edit = st.selectbox("Kategori", KATEGORI,
-                                                     index=KATEGORI.index(warung["kategori"]) if warung["kategori"] in KATEGORI else 0)
-                        alamat_edit = st.text_input("Alamat", value=warung.get("alamat", ""))
-                    with col2:
-                        harga_edit = st.text_input("Harga", value=warung["harga"])
-                        jam_edit = st.text_input("Jam Buka", value=warung.get("jam_buka", ""))
-                        jadwal_edit = st.text_input("Jadwal Buka", value=warung.get("jadwal_buka", ""))
-                        kontak_edit = st.text_input("Kontak", value=warung.get("kontak", ""))
-                        rating_edit = st.slider("Rating", 1.0, 5.0, float(warung["rating"]), 0.1)
-                    status_options = ["💎 Underrated", "⭐ Hidden Gem", "🔥 Legend", "👍 Review Bagus", "📱 Viral"]
-                    status_edit = st.selectbox("Status", status_options, 
-                                               index=status_options.index(warung["status"]) if warung["status"] in status_options else 3)
-                    st.markdown("#### 🗺️ Koordinat")
-                    col_lat2, col_lon2 = st.columns(2)
-                    with col_lat2:
-                        lat_edit = st.text_input("Latitude", value=str(warung.get('lat', '')) if warung.get('lat') else "", key="lat_edit")
-                    with col_lon2:
-                        lon_edit = st.text_input("Longitude", value=str(warung.get('lon', '')) if warung.get('lon') else "", key="lon_edit")
-                    kelebihan_edit = st.text_area("Kelebihan", value=warung.get("kelebihan", ""))
-                    kekurangan_edit = st.text_area("Kekurangan", value=warung.get("kekurangan", ""))
-                    review_edit = st.text_area("Review Warga", value=warung.get("review_warga", ""))
+        # ===== TAMPILKAN ADMIN PANEL =====
+        st.markdown("### 📋 Admin Panel - Kelola Data Kuliner")
+        st.warning("⚠️ Perubahan akan tersimpan permanen di Supabase Cloud!")
+        
+        # Tombol logout
+        col_logout1, col_logout2, col_logout3 = st.columns([2, 1, 2])
+        with col_logout2:
+            if st.button("🚪 Logout", use_container_width=True):
+                st.session_state.admin_logged_in = False
+                st.rerun()
+        
+        st.markdown("---")
+        
+        # Tampilkan daftar warung
+        if not st.session_state.warung_ciledug:
+            st.info("Belum ada data.")
+        else:
+            daftar_warung = [f"{w['id']}. {w['nama']} ({w['lokasi']})" for w in st.session_state.warung_ciledug]
+            pilihan = st.selectbox("Pilih tempat kuliner:", daftar_warung)
+            
+            if pilihan:
+                warung_id = int(pilihan.split('.')[0])
+                warung = next((w for w in st.session_state.warung_ciledug if w["id"] == warung_id), None)
+                
+                if warung:
+                    st.markdown("---")
+                    st.markdown(f"### 📝 Edit Koordinat: {warung['nama']}")
                     
-                    col_save, col_delete = st.columns(2)
-                    with col_save:
-                        save_clicked = st.form_submit_button("💾 Simpan", use_container_width=True)
-                    with col_delete:
-                        delete_clicked = st.form_submit_button("🗑️ Hapus", use_container_width=True, type="secondary")
-                    
-                    if save_clicked:
-                        if not nama_edit or not lokasi_edit or not kategori_edit or not harga_edit:
-                            st.warning("⚠️ Isi semua field penting!")
-                        else:
-                            try:
-                                lat_val = float(lat_edit) if lat_edit and lat_edit.strip() else None
-                            except ValueError:
-                                st.error("⚠️ Format Latitude tidak valid")
-                                st.stop()
-                            
-                            try:
-                                lon_val = float(lon_edit) if lon_edit and lon_edit.strip() else None
-                            except ValueError:
-                                st.error("⚠️ Format Longitude tidak valid")
-                                st.stop()
-                            
-                            warung["nama"] = nama_edit
-                            warung["lokasi"] = lokasi_edit
-                            warung["kategori"] = kategori_edit
-                            warung["harga"] = harga_edit
-                            warung["alamat"] = alamat_edit
-                            warung["jam_buka"] = jam_edit
-                            warung["jadwal_buka"] = jadwal_edit
-                            warung["kontak"] = kontak_edit
-                            warung["rating"] = rating_edit
-                            warung["status"] = status_edit
-                            warung["lat"] = lat_val
-                            warung["lon"] = lon_val
-                            warung["kelebihan"] = kelebihan_edit
-                            warung["kekurangan"] = kekurangan_edit
-                            warung["review_warga"] = review_edit
-                            warung["ditambahkan_oleh"] = "Admin (Edited)"
-                            warung["tanggal_ditambahkan"] = datetime.now().strftime("%Y-%m-%d")
-                            save_warung(warung)
-                            st.session_state.warung_ciledug = load_all_warung()
-                            st.success("✅ Data berhasil diperbarui!")
-                            st.rerun()
-                    
-                    if delete_clicked:
-                        confirm = st.checkbox("✅ Yakin hapus?")
-                        if confirm:
-                            delete_warung(warung_id)
-                            st.session_state.warung_ciledug = load_all_warung()
-                            st.success("🗑️ Tempat kuliner berhasil dihapus!")
-                            st.rerun()
+                    with st.form("edit_form"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            nama_edit = st.text_input("Nama", value=warung["nama"])
+                            lokasi_edit = st.selectbox("Lokasi", WILAYAH_CILEDUG[1:], 
+                                                       index=WILAYAH_CILEDUG[1:].index(warung["lokasi"]) if warung["lokasi"] in WILAYAH_CILEDUG[1:] else 0)
+                            kategori_edit = st.selectbox("Kategori", KATEGORI,
+                                                         index=KATEGORI.index(warung["kategori"]) if warung["kategori"] in KATEGORI else 0)
+                            alamat_edit = st.text_input("Alamat", value=warung.get("alamat", ""))
+                        with col2:
+                            harga_edit = st.text_input("Harga", value=warung["harga"])
+                            jam_edit = st.text_input("Jam Buka", value=warung.get("jam_buka", ""))
+                            jadwal_edit = st.text_input("Jadwal Buka", value=warung.get("jadwal_buka", ""))
+                            kontak_edit = st.text_input("Kontak", value=warung.get("kontak", ""))
+                            rating_edit = st.slider("⭐ Rating", 1.0, 5.0, float(warung["rating"]), 0.1)
+                        
+                        status_options = ["💎 Underrated", "⭐ Hidden Gem", "🔥 Legend", "👍 Review Bagus", "📱 Viral"]
+                        status_edit = st.selectbox("Status", status_options, 
+                                                   index=status_options.index(warung["status"]) if warung["status"] in status_options else 3)
+                        
+                        st.markdown("#### 🗺️ Koordinat (Latitude & Longitude)")
+                        st.caption("Ambil dari Google Maps: Klik kanan lokasi → 'Koordinat'")
+                        col_lat2, col_lon2 = st.columns(2)
+                        with col_lat2:
+                            lat_edit = st.text_input("Latitude", value=str(warung.get('lat', '')) if warung.get('lat') else "", key="lat_edit")
+                        with col_lon2:
+                            lon_edit = st.text_input("Longitude", value=str(warung.get('lon', '')) if warung.get('lon') else "", key="lon_edit")
+                        
+                        kelebihan_edit = st.text_area("Kelebihan", value=warung.get("kelebihan", ""))
+                        kekurangan_edit = st.text_area("Kekurangan", value=warung.get("kekurangan", ""))
+                        review_edit = st.text_area("Review Warga", value=warung.get("review_warga", ""))
+                        
+                        col_save, col_delete = st.columns(2)
+                        with col_save:
+                            save_clicked = st.form_submit_button("💾 Simpan Perubahan", use_container_width=True)
+                        with col_delete:
+                            delete_clicked = st.form_submit_button("🗑️ Hapus Warung", use_container_width=True, type="secondary")
+                        
+                        if save_clicked:
+                            if not nama_edit or not lokasi_edit or not kategori_edit or not harga_edit:
+                                st.warning("⚠️ Isi semua field penting!")
+                            else:
+                                # Validasi koordinat
+                                try:
+                                    lat_val = float(lat_edit) if lat_edit and lat_edit.strip() else None
+                                except ValueError:
+                                    st.error("⚠️ Format Latitude tidak valid. Gunakan angka dengan titik.")
+                                    st.stop()
+                                
+                                try:
+                                    lon_val = float(lon_edit) if lon_edit and lon_edit.strip() else None
+                                except ValueError:
+                                    st.error("⚠️ Format Longitude tidak valid. Gunakan angka dengan titik.")
+                                    st.stop()
+                                
+                                warung["nama"] = nama_edit
+                                warung["lokasi"] = lokasi_edit
+                                warung["kategori"] = kategori_edit
+                                warung["harga"] = harga_edit
+                                warung["alamat"] = alamat_edit
+                                warung["jam_buka"] = jam_edit
+                                warung["jadwal_buka"] = jadwal_edit
+                                warung["kontak"] = kontak_edit
+                                warung["rating"] = rating_edit
+                                warung["status"] = status_edit
+                                warung["lat"] = lat_val
+                                warung["lon"] = lon_val
+                                warung["kelebihan"] = kelebihan_edit
+                                warung["kekurangan"] = kekurangan_edit
+                                warung["review_warga"] = review_edit
+                                warung["ditambahkan_oleh"] = "Admin (Edited)"
+                                warung["tanggal_ditambahkan"] = datetime.now().strftime("%Y-%m-%d")
+                                
+                                save_warung(warung)
+                                st.session_state.warung_ciledug = load_all_warung()
+                                st.success("✅ Data berhasil diperbarui!")
+                                st.rerun()
+                        
+                        if delete_clicked:
+                            confirm = st.checkbox("✅ Yakin ingin menghapus warung ini?")
+                            if confirm:
+                                delete_warung(warung_id)
+                                st.session_state.warung_ciledug = load_all_warung()
+                                st.success("🗑️ Tempat kuliner berhasil dihapus!")
+                                st.rerun()
+                            else:
+                                st.info("Centang kotak konfirmasi untuk menghapus.")
 
 # ============================================
 # 💰 DONASI
