@@ -9,7 +9,7 @@ import urllib.parse
 import base64
 
 # ============================================
-# 🔑 CREDENTIALS (dari Streamlit Secrets)
+# 🔑 CREDENTIALS
 # ============================================
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -21,7 +21,7 @@ except:
     API_KEY_FIX = "your-gemini-key"
 
 # ============================================
-# 🗄️ SUPABASE HELPER FUNCTIONS
+# 🗄️ SUPABASE
 # ============================================
 def supabase_request(endpoint, method="GET", data=None):
     headers = {
@@ -267,31 +267,46 @@ JAWABAN:
 # ============================================
 st.set_page_config(page_title="Ciledug Food AI", page_icon="🍲", layout="wide")
 
-# ============================================
-# 📱 CSS - SIDEBAR TETAP MUNCUL, ICON GITHUB HILANG
-# ============================================
 st.markdown("""
     <style>
-    /* Biarkan header muncul, tapi sembunyikan elemen tertentu */
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-    }
+    /* ============================================
+       🚀 SEMBUNYIKAN ICON GITHUB & MANAGE APP
+       ============================================ */
 
-    /* Sembunyikan GitHub icon & Manage app */
-    header[data-testid="stHeader"] .stDeployButton {
+    /* Sembunyikan semua icon GitHub di header */
+    button[data-testid="baseButton-header"] {
         display: none !important;
     }
+
+    /* Sembunyikan deploy button (GitHub icon) */
+    .stDeployButton {
+        display: none !important;
+    }
+
+    .stAppDeployButton {
+        display: none !important;
+    }
+
+    /* Sembunyikan manage app */
+    .stApp > .stButton {
+        display: none !important;
+    }
+
+    /* Sembunyikan toolbar (GitHub + Manage) */
     header[data-testid="stHeader"] .stToolbar {
         display: none !important;
     }
+
     header[data-testid="stHeader"] .stAppDeployButton {
         display: none !important;
     }
-    header[data-testid="stHeader"] .stStatusWidget {
+
+    /* Sembunyikan semua tombol di header */
+    header[data-testid="stHeader"] button {
         display: none !important;
     }
 
-    /* TAPI TAMPILKAN TOMBOL TOGGLE SIDEBAR */
+    /* TAPI TAMPILKAN TOMBOL TOGGLE SIDEBAR (☰) */
     header[data-testid="stHeader"] button[kind="header"] {
         display: flex !important;
         position: fixed !important;
